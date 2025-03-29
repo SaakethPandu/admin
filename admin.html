@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .on { background: #ff4444; color: white; }
+        .off { background: #44cc44; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🛠️ Server Maintenance Control</h1>
+    
+    <button id="toggleBtn" class="off">Loading...</button>
+    
+    <p id="status">Checking current status...</p>
+
+    <script>
+        const GITHUB_TOKEN = "YOUR_PAT"; // Replace with GitHub Personal Access Token
+        const REPO = "your-username/your-repo"; // Your GitHub repository
+        const WORKFLOW_ID = "maintenance_toggle.yml"; // Your workflow filename
+
+        const toggleBtn = document.getElementById('toggleBtn');
+        const statusText = document.getElementById('status');
+
+        // Check current status (example - you might need an API)
+        function checkStatus() {
+            fetch('https://api.github.com/repos/' + REPO + '/contents/index.html')
+                .then(res => res.json())
+                .then(data => {
+                    const isMaintenance = data.content.includes("Maintenance Mode");
+                    updateUI(isMaintenance);
+                });
+        }
+
+        // Update button UI
+        function updateUI(isMaintenance) {
+            toggleBtn.className = isMaintenance ? "on" : "off";
+            toggleBtn.textContent = isMaintenance ? "DISABLE Maintenance" : "ENABLE Maintenance";
+            statusText.textContent = `Status: ${isMaintenance ? "🛑 UNDER MAINTENANCE" : "✅ ONLINE"}`;
+        }
+
+        // Trigger GitHub Actions
+        function toggleMaintenance(enable) {
+            fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json"
+                },
+                body: JSON.stringify({
+                    ref: "main",
+                    inputs: { enable: enable }
+                })
+            })
+            .then(() => {
+                alert("Maintenance mode change requested! It may take 1-2 minutes.");
+                setTimeout(checkStatus, 60000); // Re-check after 1 min
+            })
+            .catch(err => alert("Error: " + err.message));
+        }
+
+        // Button click handler
+        toggleBtn.addEventListener('click', () => {
+            const enable = toggleBtn.classList.contains('off');
+            toggleMaintenance(enable);
+        });
+
+        // Initial check
+        checkStatus();
+    </script>
+</body>
+</html>
